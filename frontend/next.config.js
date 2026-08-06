@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://workos-backend-q7bl.onrender.com';
 
 const nextConfig = {
   reactStrictMode: true,

@@ -1,9 +1,9 @@
+const RENDER_BACKEND_URL = 'https://workos-backend-q7bl.onrender.com';
+
 const getApiBase = () => {
-  if (typeof window !== 'undefined' && (window as any).__ENV_API_URL__) {
-    return `${(window as any).__ENV_API_URL__.replace(/\/$/, '')}/api`;
-  }
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api`;
+  if (typeof window !== 'undefined') {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL || RENDER_BACKEND_URL;
+    return `${envUrl.replace(/\/$/, '')}/api`;
   }
   return '/api';
 };
