@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,7 +10,8 @@ import {
 import { vi } from 'date-fns/locale';
 import {
   ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon,
-  Clock, CheckCircle2, LayoutGrid, CalendarDays, CalendarRange, Maximize2, AlertCircle, Trash2, Copy
+  Clock, CheckCircle2, LayoutGrid, CalendarDays, CalendarRange, Maximize2, AlertCircle, Trash2, Copy,
+  ZoomIn, ZoomOut, RotateCcw
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn, isOverdue } from '@/lib/utils';
@@ -36,6 +37,7 @@ const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
+  const [zoomScale, setZoomScale] = useState<number>(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; hour: number } | null>(null);
@@ -48,6 +50,21 @@ export default function CalendarPage() {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  const tasksBySlot = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    if (!tasks) return map;
+    for (const t of tasks) {
+      if (!t.deadline) continue;
+      const d = new Date(t.deadline);
+      const dayKey = format(d, 'yyyy-MM-dd');
+      const hour = d.getHours();
+      const slotKey = `${dayKey}_${hour}`;
+      if (!map[slotKey]) map[slotKey] = [];
+      map[slotKey].push(t);
+    }
+    return map;
+  }, [tasks]);
 
   // Compute Days for Views
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -63,7 +80,8 @@ export default function CalendarPage() {
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
   const showRedLine = currentHour >= 6 && currentHour <= 23;
-  const redLineTop = ((currentHour - 6) * 60 + currentMinute) * (80 / 60);
+  const slotMinHeight = Math.round(80 * zoomScale);
+  const redLineTop = ((currentHour - 6) * 60 + currentMinute) * (slotMinHeight / 60);
 
   // Xóa Task trực tiếp trên tờ Lịch + Đăng ký Undo Ctrl+Z
   const handleDeleteTask = async (task: any, e: React.MouseEvent) => {
@@ -149,21 +167,36 @@ export default function CalendarPage() {
 
     const newDeadline = new Date(targetDay);
     newDeadline.setHours(hour, 0, 0, 0);
+    const newDeadlineIso = newDeadline.toISOString();
+
+    mutate(
+      tasks?.map((t: any) => (t.id === taskId ? { ...t, deadline: newDeadlineIso } : t)),
+      false
+    );
 
     try {
-      await api.tasks.update(taskId, { deadline: newDeadline.toISOString() });
+      await api.tasks.update(taskId, { deadline: newDeadlineIso });
 
       const { pushAction } = await import('@/lib/undoRedoStore').then(m => m.useUndoRedoStore.getState());
       pushAction({
         id: taskId,
         description: `Đổi lịch công việc "${targetTask?.title || 'task'}"`,
-        undo: async () => { await api.tasks.update(taskId, { deadline: oldDeadline }); },
-        redo: async () => { await api.tasks.update(taskId, { deadline: newDeadline.toISOString() }); },
+        undo: async () => {
+          mutate(tasks?.map((t: any) => (t.id === taskId ? { ...t, deadline: oldDeadline } : t)), false);
+          await api.tasks.update(taskId, { deadline: oldDeadline });
+          mutate();
+        },
+        redo: async () => {
+          mutate(tasks?.map((t: any) => (t.id === taskId ? { ...t, deadline: newDeadlineIso } : t)), false);
+          await api.tasks.update(taskId, { deadline: newDeadlineIso });
+          mutate();
+        },
       });
 
       toast.success(`🎉 Đã đổi lịch sang ${format(newDeadline, 'HH:mm - EEEE, d/M', { locale: vi })}`);
       mutate();
     } catch (err: any) {
+      mutate();
       toast.error('Lỗi khi đổi lịch công việc');
     } finally {
       setDraggedTaskId(null);
@@ -178,7 +211,44 @@ export default function CalendarPage() {
           <h1 className="page-title text-2xl font-black flex items-center gap-2 text-[var(--text)]">
             <CalendarIcon size={24} className="text-primary" /> Lịch Công Việc 24h Việt Nam
           </h1>
-          <p className="text-xs text-[var(--text-muted)]">Nút nhân bản task 📋 · Xóa task 🗑️ · Đổi màu sắc tùy chỉnh · Hỗ trợ Ctrl+Z</p>
+          <p className="text-xs text-[var(--text-muted)] font-bold mt-0.5">
+            {format(currentDate, 'MMMM yyyy', { locale: vi })}
+          </p>
+        </div>
+
+        {/* Action Controls & Zoom Level */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] shadow-soft text-xs font-black">
+            <button
+              onClick={() => setZoomScale(prev => Math.max(0.65, +(prev - 0.2).toFixed(2)))}
+              title="Thu nhỏ kích thước ô lịch"
+              className="btn-ghost p-1.5 text-[var(--text-muted)] hover:text-primary"
+            >
+              <ZoomOut size={14} />
+            </button>
+
+            <span className="px-1 text-[11px] font-mono text-primary select-none">
+              {Math.round(zoomScale * 100)}%
+            </span>
+
+            <button
+              onClick={() => setZoomScale(prev => Math.min(1.75, +(prev + 0.2).toFixed(2)))}
+              title="Phóng to kích thước ô lịch"
+              className="btn-ghost p-1.5 text-[var(--text-muted)] hover:text-primary"
+            >
+              <ZoomIn size={14} />
+            </button>
+
+            {zoomScale !== 1 && (
+              <button
+                onClick={() => setZoomScale(1)}
+                title="Khôi phục chuẩn 100%"
+                className="btn-ghost p-1.5 text-xs text-rose-500"
+              >
+                <RotateCcw size={12} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* View Switcher Controls */}
@@ -383,7 +453,7 @@ export default function CalendarPage() {
 
                 {/* HÀNG MỐC GIỜ NẰM NGANG ĐỒNG BỘ 100% */}
                 {HOURS.map(hour => (
-                  <div key={hour} className="flex items-stretch border-b border-[var(--border)] min-h-[80px] group/row">
+                  <div key={hour} style={{ minHeight: `${slotMinHeight}px` }} className="flex items-stretch border-b border-[var(--border)] group/row">
                     {/* Cột mốc giờ bên trái - tự động kéo dài bằng chiều cao hàng */}
                     <div className="w-[70px] shrink-0 border-r border-[var(--border)] bg-gray-50/30 dark:bg-[#0e1017] text-[11px] font-black text-[var(--text-muted)] pr-2 text-right pt-2 tabular-nums select-none">
                       {hour < 10 ? `0${hour}:00` : `${hour}:00`}
@@ -393,11 +463,8 @@ export default function CalendarPage() {
                     <div className={cn('flex-1 grid gap-0 divide-x divide-[var(--border)]', (viewMode as string) === 'day' ? 'grid-cols-1' : 'grid-cols-7')}>
                       {weekDays.map(day => {
                         const isT = isToday(day);
-                        const slotTasks = tasks?.filter((t: any) => {
-                          if (!t.deadline) return false;
-                          const d = new Date(t.deadline);
-                          return isSameDay(d, day) && d.getHours() === hour;
-                        }) || [];
+                        const dayKey = format(day, 'yyyy-MM-dd');
+                        const slotTasks = tasksBySlot[`${dayKey}_${hour}`] || [];
 
                         return (
                           <div
@@ -410,8 +477,9 @@ export default function CalendarPage() {
                               setSelectedSlot({ date: dt, hour });
                               setCreateOpen(true);
                             }}
+                            style={{ minHeight: `${slotMinHeight}px` }}
                             className={cn(
-                              'p-1.5 hover:bg-primary/10 transition-colors relative cursor-pointer flex flex-col gap-1.5 min-h-[80px]',
+                              'p-1.5 hover:bg-primary/10 transition-colors relative cursor-pointer flex flex-col gap-1.5',
                               isT && 'bg-primary/5'
                             )}
                           >
