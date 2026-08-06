@@ -1,7 +1,18 @@
-const API_BASE = '/api';
+const getApiBase = () => {
+  if (typeof window !== 'undefined' && (window as any).__ENV_API_URL__) {
+    return `${(window as any).__ENV_API_URL__.replace(/\/$/, '')}/api`;
+  }
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api`;
+  }
+  return '/api';
+};
+
+const API_BASE = getApiBase();
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const baseUrl = getApiBase();
+  const res = await fetch(`${baseUrl}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
   });

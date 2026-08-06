@@ -69,12 +69,14 @@ export function TaskCreateModal({ open, onClose, onCreated, defaultValues }: Tas
 
     setLoading(true);
     try {
+      const deadlineValue = form.deadline ? new Date(form.deadline).toISOString() : new Date(Date.now() + 3600000).toISOString();
       const task = await api.tasks.create({
         title: form.title.trim(),
         description: form.description,
-        deadline: form.deadline || null,
+        deadline: deadlineValue,
         priority: form.priority,
         category: form.category,
+        color: form.color,
         status: defaultValues?.status || 'todo',
         tags: [...form.tags, form.mediaType === 'image' ? 'Ảnh' : 'Video'],
         checklist: form.checklist,
