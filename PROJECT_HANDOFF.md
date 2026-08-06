@@ -254,12 +254,12 @@
 | 2026-08-06 | Sửa Căn Nguyên Lỗi Backend & Khởi Chạy Song Song Backend/Frontend | Biên dịch dist TypeScript backend có cột `color` & kích hoạt lại cả 2 server process daemon 3000 & 4000 100% thông suốt |
 | 2026-08-06 | Bỏ Tiền Tố `[Bản sao]` Khi Nhân Bản Task Trên Lịch | Nhân bản task giữ nguyên 100% tiêu đề gốc của công việc, không thêm chữ Bản sao làm mất công xóa |
 | 2026-08-06 | Rút Gọn Tiêu Đề Header Trang Lịch | Đổi tiêu đề thành `Lịch Công Việc 24h Việt Nam` tinh tế & tối giản |
-| 2026-08-06 | Tái Cấu Trúc DOM Lịch Hàng Giờ Ngang Đồng Bộ 100% | Chuyển sang `HOURS.map` hàng ngang `items-stretch`. Cột giờ bên trái & ranh giới đường kẻ ngang tự động mở rộng đồng bộ tuyệt đối khi có nhiều task |
+| 2026-08-06 | Tái Cấu Trúc DOM Lịch Hàng Giờ Ngang Đồng Bộ 100% | Chuyển sang `HOURS.map` hàng ngang `items-stretch`. Cột giờ bên trái & ranh giới đường kẻ ngang tự động mở rộng đồng bộ tuyệt đối khi có nhiều task || 2026-08-06 | Sửa Lỗi API Routing Vercel & Tự Động Định Dạng Deadline | Cấu hình `next.config.js` & `api.ts` tự định tuyến chuẩn tới `NEXT_PUBLIC_API_URL` Render Backend & Tự động sinh deadline hợp lệ khi tạo task |
 
 ### 🔄 Đang làm
 | Task | Assignee | Ghi chú |
 |------|----------|---------|
-| Running Production Server Daemons (Background Processes) | AI | Frontend 3000 (task-1166), Backend 4000 (task-901) running 100% stable |
+| Running Production Server Daemons & Cloud Deployments | AI | Frontend Vercel (`workos-app-frontend.vercel.app`), Backend Render (`workos-backend-q7bl.onrender.com`) |
 
 ### 📋 Chưa bắt đầu
 | Task | Priority | Ghi chú |
