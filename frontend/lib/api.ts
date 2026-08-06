@@ -12,15 +12,21 @@ const API_BASE = getApiBase();
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const baseUrl = getApiBase();
-  const res = await fetch(`${baseUrl}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
+  try {
+    const res = await fetch(`${baseUrl}${path}`, {
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      ...options,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Lỗi máy chủ (${res.status})`);
+    }
+    return res.json();
+  } catch (err: any) {
+    console.error('Fetch error details:', err);
+    throw new Error(err.message || 'Không thể kết nối máy chủ');
   }
-  return res.json();
 }
 
 // Tasks
