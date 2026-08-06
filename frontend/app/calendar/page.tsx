@@ -503,7 +503,7 @@ export default function CalendarPage() {
                                     setSelectedTaskId(task.id);
                                   }}
                                   className={cn(
-                                    'min-h-[58px] p-2 rounded-xl text-xs cursor-pointer shadow-md transition-all group/card relative flex flex-col justify-between',
+                                    'min-h-[58px] p-2 rounded-xl text-xs cursor-grab active:cursor-grabbing select-none touch-none will-change-transform shadow-md transition-transform duration-75 group/card relative flex flex-col justify-between',
                                     overdue
                                       ? 'bg-rose-600 dark:bg-rose-700 text-white ring-2 ring-red-400 font-black'
                                       : taskBg,

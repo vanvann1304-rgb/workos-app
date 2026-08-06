@@ -348,12 +348,36 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
 
                             <div className="space-y-1.5">
                               {msg.proposals.map((prop, pIdx) => (
-                                <div key={pIdx} className="flex items-center justify-between p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs">
-                                  <div className="flex items-center gap-2 truncate">
-                                    <span className="font-mono text-[11px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                                      {prop.timeString}
-                                    </span>
-                                    <span className="font-semibold text-[var(--text)] truncate">{prop.title}</span>
+                                <div key={pIdx} className="flex items-center justify-between p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs gap-2">
+                                  <div className="flex items-center gap-2 flex-1 truncate">
+                                    {/* Dropdown chỉnh chọn Giờ trực tiếp 1-click */}
+                                    <select
+                                      value={prop.hour}
+                                      onChange={e => {
+                                        const newHour = parseInt(e.target.value, 10);
+                                        const hourStr = `${newHour < 10 ? '0' : ''}${newHour}:00`;
+                                        prop.hour = newHour;
+                                        prop.timeString = hourStr;
+                                        setChatMessages([...chatMessages]);
+                                      }}
+                                      className="font-mono text-[11px] font-black bg-primary/20 text-primary border border-primary/40 px-1.5 py-0.5 rounded-lg outline-none cursor-pointer hover:bg-primary/30 shrink-0"
+                                      title="Nhấn để đổi khung giờ thủ công"
+                                    >
+                                      {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map(h => (
+                                        <option key={h} value={h} className="bg-[#1a1a1a] text-white font-bold">
+                                          {h < 10 ? `0${h}:00` : `${h}:00`}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <input
+                                      type="text"
+                                      value={prop.title}
+                                      onChange={e => {
+                                        prop.title = e.target.value;
+                                        setChatMessages([...chatMessages]);
+                                      }}
+                                      className="font-semibold text-[var(--text)] bg-transparent border-b border-transparent hover:border-gray-500 focus:border-primary outline-none flex-1 truncate text-xs"
+                                    />
                                   </div>
                                   <span className="text-[10px] font-extrabold text-[var(--text-muted)] shrink-0">
                                     {prop.category}

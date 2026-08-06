@@ -306,8 +306,25 @@ export function TaskDetailPanel({
           <label className="block text-xs font-black text-gray-300 mb-1.5 uppercase tracking-wider">Link mẫu đính kèm</label>
           <div className="space-y-2 mb-2">
             {task.attachments?.map((att: any) => (
-              <div key={att.id} className="p-2.5 rounded-xl bg-[#121526] border border-gray-800 flex items-center justify-between text-xs font-bold">
+              <div key={att.id} className="p-2.5 rounded-xl bg-[#121526] border border-gray-800 flex items-center justify-between text-xs font-bold group">
                 <span className="truncate text-blue-400">🔗 {att.name}: <a href={att.url} target="_blank" rel="noreferrer" className="underline text-gray-300">{att.url}</a></span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await api.tasks.deleteAttachment(taskId, att.id);
+                      toast.success('🗑️ Đã xóa link đính kèm');
+                      mutate();
+                      onUpdated?.();
+                    } catch {
+                      toast.error('Lỗi khi xóa link');
+                    }
+                  }}
+                  title="Xóa link mẫu này"
+                  className="p-1 rounded text-rose-400 hover:bg-rose-500/20 opacity-80 group-hover:opacity-100 transition-all shrink-0 ml-2"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -385,6 +402,18 @@ export function TaskDetailPanel({
               + Thêm
             </button>
           </form>
+        </div>
+
+        {/* NÚT LƯU THAY ĐỔI NỔI BẬT NỐI BẤM CHỦ ĐỘNG CHỐNG VĂNG BÔI ĐEN KHI GÕ */}
+        <div className="pt-4 sticky bottom-0 bg-[#0b0e1b]/95 backdrop-blur-md pb-2 border-t border-gray-800/80">
+          <button
+            type="button"
+            onClick={() => handleSaveField(form)}
+            disabled={saving}
+            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs shadow-lg shadow-blue-600/40 flex items-center justify-center gap-2 transition-all transform active:scale-98 cursor-pointer uppercase tracking-wider"
+          >
+            <Save size={16} /> {saving ? 'Đang lưu dữ liệu...' : '💾 LƯU THAY ĐỔI LÊN HỆ THỐNG'}
+          </button>
         </div>
       </div>
     </div>
