@@ -257,6 +257,7 @@
 | 2026-08-06 | Tái Cấu Trúc DOM Lịch Hàng Giờ Ngang Đồng Bộ 100% | Chuyển sang `HOURS.map` hàng ngang `items-stretch`. Cột giờ bên trái & ranh giới đường kẻ ngang tự động mở rộng đồng bộ tuyệt đối khi có nhiều task || 2026-08-06 | Sửa Lỗi API Routing Vercel & Tự Động Định Dạng Deadline | Cấu hình `next.config.js` & `api.ts` tự định tuyến chuẩn tới `NEXT_PUBLIC_API_URL` Render Backend & Tự động sinh deadline hợp lệ khi tạo task |
 | 2026-08-06 | Bổ Sung Xử Lý OPTIONS Preflight CORS Bằng HTTP Test Script | Thêm full `OPTIONS` preflight headers (`app.options('*', cors())`) & `mode: 'cors'` cho trình duyệt web cross-origin |
 | 2026-08-06 | Nâng Cấp Trợ Lý AI Tiếng Việt Tự Nhiên & Google Gemini Key | Xử lý chuẩn 100% các cụm từ "6h tối" (18:00), "8h sáng" (08:00), "sáng mai"... & Tích hợp thêm Tab cấu hình Google Gemini API Key miễn phí |
+| 2026-08-06 | Bổ Sung Bộ Zoom In/Out Mobile & Tối Ưu Kéo Thả 60fps 0ms | Thêm bộ nút Zoom Phóng to/Thu nhỏ ô lịch cho Điện thoại & Tối ưu mảng tra cứu O(1) + Optimistic UI 0ms loại bỏ hoàn toàn đơ khựng 1s khi di chuyển task |
 
 ### 🔄 Đang làm
 | Task | Assignee | Ghi chú |

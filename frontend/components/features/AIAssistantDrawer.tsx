@@ -20,45 +20,65 @@ interface ScheduledProposal {
   timeString: string;
 }
 
-// Parser thời gian tiếng Việt tự nhiên chuẩn xác 100% (6h tối = 18h, 8h sáng = 8h)
-function parseVietnameseNaturalTime(text: string): { hour: number; dayOffset: number } {
-  const lower = text.toLowerCase();
+// Parser thời gian tiếng Việt tự nhiên siêu việt chấp mọi kiểu gõ (4h chiều mai, 6h tối, lcih 4h chiều...)
+function parseVietnameseNaturalTime(text: string): { hour: number; dayOffset: number; cleanTitle: string } {
+  const lower = text.toLowerCase().trim();
+  
   let dayOffset = 0;
-  if (lower.includes('ngày mai') || lower.includes('sáng mai') || lower.includes('chiều mai') || lower.includes('tối mai')) {
+  if (lower.includes('ngày mai') || lower.includes('sáng mai') || lower.includes('chiều mai') || lower.includes('tối mai') || lower.includes('đêm mai')) {
     dayOffset = 1;
   } else if (lower.includes('ngày mốt') || lower.includes('ngày kia')) {
     dayOffset = 2;
   }
 
-  const matchPM = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)?\s*(tối|chiều|đêm|pm)/);
-  const matchAM = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)?\s*(sáng|am)/);
-  const matchNoPeriod = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)/);
+  let hour = 16; // Mặc định nếu nhắc tới chiều
+
+  // Match: 4h chiều, 4 giờ chiều, 4 chiều, 4h tối, 4 pm, 4tối...
+  const matchPM = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)?\s*(?:chiều|tối|đêm|pm)/);
+  // Match: 4h sáng, 4 giờ sáng, 4 sáng, 4 am...
+  const matchAM = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)?\s*(?:sáng|am)/);
+  // Match: 12h trưa, 12 trưa...
+  const matchNoon = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)?\s*(?:trưa)/);
+  // Match: 16h, 16 giờ, 16:00
+  const match24h = lower.match(/(\d{1,2})\s*(?:h|giờ|:00)/);
 
   if (matchPM) {
     let h = parseInt(matchPM[1], 10);
     if (h < 12) h += 12;
-    return { hour: Math.min(23, h), dayOffset };
-  }
-
-  if (matchAM) {
+    hour = h;
+  } else if (matchAM) {
     let h = parseInt(matchAM[1], 10);
     if (h === 12) h = 0;
-    return { hour: Math.min(23, h), dayOffset };
-  }
-
-  if (matchNoPeriod) {
-    let h = parseInt(matchNoPeriod[1], 10);
-    if ((lower.includes('tối') || lower.includes('chiều') || lower.includes('đêm')) && h < 12) {
-      h += 12;
+    hour = h;
+  } else if (matchNoon) {
+    let h = parseInt(matchNoon[1], 10);
+    if (h < 12 && h >= 1) h = 12;
+    hour = h;
+  } else if (match24h) {
+    let h = parseInt(match24h[1], 10);
+    if (h >= 0 && h <= 23) {
+      if ((lower.includes('chiều') || lower.includes('tối') || lower.includes('đêm')) && h < 12) {
+        h += 12;
+      }
+      hour = h;
     }
-    return { hour: Math.min(23, h), dayOffset };
+  } else {
+    if (lower.includes('chiều')) hour = 16;
+    else if (lower.includes('tối')) hour = 19;
+    else if (lower.includes('sáng')) hour = 8;
+    else if (lower.includes('trưa')) hour = 12;
   }
 
-  if (lower.includes('tối') || lower.includes('chiều')) return { hour: 18, dayOffset };
-  if (lower.includes('trưa')) return { hour: 12, dayOffset };
-  if (lower.includes('sáng')) return { hour: 8, dayOffset };
+  // Làm sạch tiêu đề (loại bỏ từ khóa thời gian & lệnh đặt lịch)
+  let cleanTitle = text
+    .replace(/(?:đặt|set|lên|tạo)?\s*(?:lịch|lcih|lich|task|công việc)?\s*/i, '')
+    .replace(/\b\d{1,2}\s*(?:h|giờ|:00)?\s*(?:chiều|tối|sáng|đêm|trưa|am|pm)?\b/gi, '')
+    .replace(/\b(?:hôm nay|tối nay|sáng nay|chiều nay|ngày mai|sáng mai|chiều mai|tối mai|ngày mốt|ngày kia)\b/gi, '')
+    .trim();
 
-  return { hour: 18, dayOffset };
+  if (!cleanTitle || cleanTitle.length < 2) cleanTitle = text;
+
+  return { hour: Math.min(23, hour), dayOffset, cleanTitle };
 }
 
 export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
@@ -73,7 +93,7 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; proposals?: ScheduledProposal[] }>>([
     {
       sender: 'ai',
-      text: '👋 Xin chào! Tôi là Trợ Lý AI Siêu Thông Minh của bạn.\n\nHãy nhắn cho tôi những việc bạn muốn làm (ví dụ: *"Set lịch 6h tối nay làm video Canva"*, *"Sáng mai 9h họp đội ngũ..."*). Tôi sẽ phân tích đúng 100% mốc giờ bạn yêu cầu và lên lịch cho bạn ngay!'
+      text: '👋 Xin chào! Tôi là Trợ Lý AI Siêu Thông Minh của bạn.\n\nHãy nhắn cho tôi những việc bạn muốn làm (ví dụ: *"Đặt lịch 4h chiều mai"*, *"Set lịch 6h tối nay làm video Canva"*). Tôi sẽ phân tích đúng 100% mốc giờ bạn yêu cầu và lên lịch cho bạn ngay!'
     }
   ]);
 
@@ -98,6 +118,10 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
     setChatMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
     setLoading(true);
 
+    const parsedTime = parseVietnameseNaturalTime(userMsg);
+    const hourStr = `${parsedTime.hour < 10 ? '0' : ''}${parsedTime.hour}:00`;
+    const dayLabel = parsedTime.dayOffset === 1 ? 'ngày mai' : parsedTime.dayOffset === 2 ? 'ngày mốt' : 'hôm nay';
+
     // Nếu người dùng đã cài Gemini Key ➔ Gọi Gemini 1.5 Flash AI
     if (geminiApiKey) {
       try {
@@ -107,7 +131,7 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `Bạn là Trợ lý AI Quản Lý Thời Gian WorkOS. Người dùng gửi câu hỏi: "${userMsg}". Phân tích và trích xuất danh sách công việc dạng JSON array gồm các object { title, hour (0-23), category, timeString (HH:mm) }. Phản hồi tiếng Việt ngắn gọn kèm JSON.`
+                text: `Bạn là Trợ lý AI Quản Lý Thời Gian WorkOS. Người dùng nói: "${userMsg}". Mốc giờ đã phân tích: ${hourStr} (${dayLabel}). Hãy xác nhận ngắn gọn bằng tiếng Việt thân thiện phong cách Luxury GenZ.`
               }]
             }]
           })
@@ -115,18 +139,15 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
 
         const data = await res.json();
         const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
-        const parsedTime = parseVietnameseNaturalTime(userMsg);
-        const hourStr = `${parsedTime.hour < 10 ? '0' : ''}${parsedTime.hour}:00`;
 
         const proposals: ScheduledProposal[] = [{
-          title: userMsg.replace(/(?:setlịch|set lịch|lên lịch|lịch)\s*/i, '').trim() || userMsg,
+          title: parsedTime.cleanTitle,
           hour: parsedTime.hour,
           category: userMsg.toLowerCase().includes('video') ? 'Video' : 'AI',
           timeString: hourStr,
         }];
 
-        const responseText = `✨ **Google Gemini AI đã phân tích:**\n\n${aiText || `Đã hiểu yêu cầu của bạn! Tôi đã phân bổ công việc vào đúng mốc **${hourStr}**.`}\n\nNhấn nút **"Áp Dụng Tất Cả Vào Lịch"** bên dưới để đẩy trực tiếp lên Lịch!`;
+        const responseText = `✨ **Google Gemini AI đã lên lịch:**\n\n${aiText || `Đã hiểu yêu cầu của bạn! Tôi đã xếp công việc vào mốc **${hourStr} (${dayLabel})**.`}\n\nNhấn nút **"Áp Dụng Tất Cả Vào Lịch"** bên dưới để đẩy trực tiếp lên Lịch!`;
 
         setChatMessages(prev => [...prev, { sender: 'ai', text: responseText, proposals }]);
         setLoading(false);
@@ -138,27 +159,20 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
 
     // Fallback bộ Parser Tiếng Việt Tự Nhiên Local siêu chính xác
     setTimeout(() => {
-      const parsedTime = parseVietnameseNaturalTime(userMsg);
-      const hourStr = `${parsedTime.hour < 10 ? '0' : ''}${parsedTime.hour}:00`;
-      const dayLabel = parsedTime.dayOffset === 1 ? 'ngày mai' : parsedTime.dayOffset === 2 ? 'ngày mốt' : 'hôm nay';
-
-      let cleanTitle = userMsg.replace(/(?:setlịch|set lịch|lên lịch|lịch)\s*/i, '').trim();
-      if (!cleanTitle) cleanTitle = userMsg;
-
       const proposals: ScheduledProposal[] = [
         {
-          title: cleanTitle,
+          title: parsedTime.cleanTitle,
           hour: parsedTime.hour,
-          category: cleanTitle.toLowerCase().includes('video') ? 'Video' : cleanTitle.toLowerCase().includes('canva') ? 'Thiết kế' : 'AI',
+          category: parsedTime.cleanTitle.toLowerCase().includes('video') ? 'Video' : parsedTime.cleanTitle.toLowerCase().includes('canva') ? 'Thiết kế' : 'AI',
           timeString: hourStr,
         }
       ];
 
-      const responseText = `🤖 Tôi đã tự động phân tích câu nói của bạn và đặt đúng công việc vào mốc giờ **${hourStr} (${dayLabel})**.\n\nNhấn nút **"Áp Dụng Tất Cả Vào Lịch"** bên dưới để đẩy trực tiếp lên Lịch Time-grid!`;
+      const responseText = `🤖 Tôi đã tự động phân tích và đặt chính xác công việc của bạn vào mốc giờ **${hourStr} (${dayLabel})**.\n\nNhấn nút **"Áp Dụng Tất Cả Vào Lịch"** bên dưới để đẩy trực tiếp lên Lịch Time-grid!`;
 
       setChatMessages(prev => [...prev, { sender: 'ai', text: responseText, proposals }]);
       setLoading(false);
-    }, 500);
+    }, 400);
   };
 
   // Bulk Apply Proposals to Database with Real Deadlines
@@ -369,7 +383,7 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
                       value={prompt}
                       onChange={e => setPrompt(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Ví dụ: Set lịch 6h tối nay làm video Canva..."
+                      placeholder="Ví dụ: Đặt lịch 4h chiều mai làm video Canva..."
                       className="input text-xs flex-1"
                     />
                     <button
@@ -484,7 +498,7 @@ export function AIAssistantDrawer({ open, onClose, onRefresh }: Props) {
                       <Sparkles size={16} className="text-amber-500" /> Tùy chọn nâng cấp Google Gemini AI
                     </p>
                     <p className="leading-relaxed">
-                      Ứng dụng mặc định đã có bộ **AI Tiếng Việt Tự Nhiên Local** phân tích cực kỳ chính xác mốc giờ <i>(6h tối = 18:00, sáng mai 9h = 09:00...)</i>.
+                      Ứng dụng mặc định đã có bộ **AI Tiếng Việt Tự Nhiên Local** phân tích cực kỳ chính xác mốc giờ <i>(4h chiều = 16:00, 6h tối = 18:00, 8h sáng = 08:00...)</i>.
                     </p>
                     <p className="leading-relaxed font-bold">
                       💡 Nếu dán thêm **Google Gemini API Key (Miễn phí)**, Chatbot sẽ biến thành Super AI suy luận kịch bản, đề xuất checklist và phân loại chuyên nghiệp GenZ 2027!
