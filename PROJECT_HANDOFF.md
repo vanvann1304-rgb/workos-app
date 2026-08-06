@@ -258,6 +258,7 @@
 | 2026-08-06 | Bổ Sung Xử Lý OPTIONS Preflight CORS Bằng HTTP Test Script | Thêm full `OPTIONS` preflight headers (`app.options('*', cors())`) & `mode: 'cors'` cho trình duyệt web cross-origin |
 | 2026-08-06 | Nâng Cấp Trợ Lý AI Tiếng Việt Tự Nhiên & Google Gemini Key | Xử lý chuẩn 100% các cụm từ "6h tối" (18:00), "8h sáng" (08:00), "sáng mai"... & Tích hợp thêm Tab cấu hình Google Gemini API Key miễn phí |
 | 2026-08-06 | Bổ Sung Bộ Zoom In/Out Mobile & Tối Ưu Kéo Thả 60fps 0ms | Thêm bộ nút Zoom Phóng to/Thu nhỏ ô lịch cho Điện thoại & Tối ưu mảng tra cứu O(1) + Optimistic UI 0ms loại bỏ hoàn toàn đơ khựng 1s khi di chuyển task |
+| 2026-08-06 | Sửa Lỗi Văng Bôi Đen, Nút Xóa Link & Dropdown Chỉnh Giờ AI 1 Chạm | Thêm nút Xóa link mẫu đính kèm (`Trash2`), Nút **LƯU THAY ĐỔI** chủ động chống văng con trỏ/bôi đen khi gõ & Biến mốc giờ AI đề xuất thành Dropdown chỉnh giờ 1-click |
 
 ### 🔄 Đang làm
 | Task | Assignee | Ghi chú |
