@@ -384,7 +384,7 @@ export default function CalendarPage() {
                 Giờ VN
               </div>
               {weekDays.map(day => {
-                const isT = isToday(day);
+                const isT = isSameDay(day, now);
                 return (
                   <div key={day.toISOString()} className={cn(
                     'py-2 px-2 text-center border-r border-[var(--border)] last:border-r-0 transition-colors',
@@ -462,7 +462,7 @@ export default function CalendarPage() {
                     {/* Các ô slot đại diện cho từng Ngày trong đúng mốc hour này */}
                     <div className={cn('flex-1 grid gap-0 divide-x divide-[var(--border)]', (viewMode as string) === 'day' ? 'grid-cols-1' : 'grid-cols-7')}>
                       {weekDays.map(day => {
-                        const isT = isToday(day);
+                        const isT = isSameDay(day, now);
                         const dayKey = format(day, 'yyyy-MM-dd');
                         const slotTasks = tasksBySlot[`${dayKey}_${hour}`] || [];
 

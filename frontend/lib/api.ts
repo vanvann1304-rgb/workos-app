@@ -10,6 +10,29 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+// Persistent Local Backup Key chống mất dữ liệu vĩnh viễn khi Server Render sleep/reset
+const LOCAL_PERSISTENT_TASKS_KEY = 'workos_persistent_tasks_backup_v2';
+
+function saveLocalTasksBackup(tasks: any[]) {
+  if (typeof window !== 'undefined' && Array.isArray(tasks)) {
+    try {
+      localStorage.setItem(LOCAL_PERSISTENT_TASKS_KEY, JSON.stringify(tasks));
+    } catch (e) {}
+  }
+}
+
+function getLocalTasksBackup(): any[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const data = localStorage.getItem(LOCAL_PERSISTENT_TASKS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const baseUrl = getApiBase();
   try {
@@ -29,17 +52,68 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
-// Tasks
+// Tasks Client Persistence Manager
 export const api = {
   tasks: {
-    list: (params?: Record<string, string>) => {
+    list: async (params?: Record<string, string>) => {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';
-      return request<any[]>(`/tasks${q}`);
+      try {
+        const serverTasks = await request<any[]>(`/tasks${q}`);
+        const localBackup = getLocalTasksBackup();
+
+        // Nếu máy chủ backend Render vừa sleep/reset trả về rỗng nhưng máy khách có dữ liệu ➔ TỰ KHÔI PHỤC VĨNH VIỄN!
+        if (serverTasks.length === 0 && localBackup.length > 0) {
+          console.log('🔄 Đang tự động khôi phục vĩnh viễn dữ liệu task từ Local Backup...');
+          for (const oldTask of localBackup) {
+            try {
+              await request<any>('/tasks', {
+                method: 'POST',
+                body: JSON.stringify({
+                  title: oldTask.title,
+                  description: oldTask.description || '',
+                  deadline: oldTask.deadline || null,
+                  priority: oldTask.priority || 'medium',
+                  category: oldTask.category || 'Khác',
+                  status: oldTask.status || 'todo',
+                  color: oldTask.color || null,
+                  tags: oldTask.tags || [],
+                  checklist: oldTask.checklist || [],
+                  attachments: oldTask.attachments || [],
+                }),
+              });
+            } catch (e) {}
+          }
+          const restoredTasks = await request<any[]>(`/tasks${q}`);
+          saveLocalTasksBackup(restoredTasks);
+          return restoredTasks;
+        }
+
+        saveLocalTasksBackup(serverTasks);
+        return serverTasks;
+      } catch (err) {
+        // Nếu sập mạng ➔ Trả về bản sao lưu vĩnh viễn trên thiết bị người dùng
+        return getLocalTasksBackup();
+      }
     },
     get: (id: string) => request<any>(`/tasks/${id}`),
-    create: (data: any) => request<any>('/tasks', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: any) => request<any>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    delete: (id: string) => request<any>(`/tasks/${id}`, { method: 'DELETE' }),
+    create: async (data: any) => {
+      const newTask = await request<any>('/tasks', { method: 'POST', body: JSON.stringify(data) });
+      const current = getLocalTasksBackup();
+      saveLocalTasksBackup([newTask, ...current.filter(t => t.id !== newTask.id)]);
+      return newTask;
+    },
+    update: async (id: string, data: any) => {
+      const updated = await request<any>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      const current = getLocalTasksBackup();
+      saveLocalTasksBackup(current.map(t => (t.id === id ? { ...t, ...updated } : t)));
+      return updated;
+    },
+    delete: async (id: string) => {
+      const res = await request<any>(`/tasks/${id}`, { method: 'DELETE' });
+      const current = getLocalTasksBackup();
+      saveLocalTasksBackup(current.filter(t => t.id !== id));
+      return res;
+    },
     
     // Checklist
     getChecklist: (id: string) => request<any[]>(`/tasks/${id}/checklist`),
@@ -56,7 +130,7 @@ export const api = {
     get: (id: string) => request<any>(`/notes/${id}`),
     create: (data: any) => request<any>('/notes', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) => request<any>(`/notes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    delete: (id: string) => request<any>(`/notes/${id}`, { method: 'DELETE' }),
+    delete: (id: string) => request<any>('/notes', { method: 'DELETE' }),
   },
   habits: {
     list: () => request<any[]>('/habits'),
