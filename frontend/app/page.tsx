@@ -9,6 +9,7 @@ import {
   saveStoredContentItems
 } from '@/lib/contentData';
 import { ContentHeaderBanner } from '@/components/content-dashboard/ContentHeaderBanner';
+import { QuickWorkAndAIWidget } from '@/components/content-dashboard/QuickWorkAndAIWidget';
 import { ContentFilterBar } from '@/components/content-dashboard/ContentFilterBar';
 import { KPIOverview } from '@/components/content-dashboard/KPIOverview';
 import { CampaignSection } from '@/components/content-dashboard/CampaignSection';
@@ -49,13 +50,11 @@ export default function ContentPlanDashboard() {
     setSyncTime(now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   }, []);
 
-  // Save to localStorage when items change
   const updateItemsState = (newItems: ContentItem[]) => {
     setItems(newItems);
     saveStoredContentItems(newItems);
   };
 
-  // Filter handler
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
@@ -75,7 +74,6 @@ export default function ContentPlanDashboard() {
     return Object.values(filters).some(v => v !== 'All');
   }, [filters]);
 
-  // Filter items in real-time
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       if (filters.campaign !== 'All' && item.campaign !== filters.campaign) return false;
@@ -87,7 +85,6 @@ export default function ContentPlanDashboard() {
     });
   }, [items, filters]);
 
-  // Actions
   const handleAddPost = (newPost: ContentItem) => {
     const updated = [newPost, ...items];
     updateItemsState(updated);
@@ -116,7 +113,6 @@ export default function ContentPlanDashboard() {
     toast.success(`📋 Đã nhân bản bài viết "${post.title}" sang trạng thái Idea!`);
   };
 
-  // Export CSV
   const handleExportCSV = () => {
     if (filteredItems.length === 0) {
       toast.error('Không có dữ liệu để xuất CSV!');
@@ -150,7 +146,6 @@ export default function ContentPlanDashboard() {
     toast.success('📊 Đã xuất file CSV thành công!');
   };
 
-  // Sync Data simulation
   const handleSyncData = () => {
     setIsSyncing(true);
     toast.loading('🔄 Đang đồng bộ dữ liệu từ Google Sheets nguồn...');
@@ -188,7 +183,10 @@ export default function ContentPlanDashboard() {
         totalFiltered={filteredItems.length}
       />
 
-      {/* 2. Filter Bar (1 row, dropdowns + reset) */}
+      {/* 2. Quick Work Today & AI Assistant Widget (Matching Screenshot 1 & 2) */}
+      <QuickWorkAndAIWidget />
+
+      {/* 3. Filter Bar (1 row, dropdowns + reset) */}
       <ContentFilterBar
         filters={filters}
         onChangeFilter={handleFilterChange}
@@ -197,32 +195,32 @@ export default function ContentPlanDashboard() {
         totalFilteredCount={filteredItems.length}
       />
 
-      {/* 3. KPI Overview (4 KPI cards + Progress bar row) */}
+      {/* 4. KPI Overview (4 KPI cards + Progress bar row) */}
       <KPIOverview items={filteredItems} />
 
-      {/* 4. Active Campaigns Section */}
+      {/* 5. Active Campaigns Section */}
       <CampaignSection items={filteredItems} />
 
-      {/* 5. Content Calendar View */}
+      {/* 6. Content Calendar View */}
       <ContentCalendarView
         items={filteredItems}
         onSelectPost={(post) => setSelectedPost(post)}
       />
 
-      {/* 6. Production Pipeline (Kanban 9 columns) */}
+      {/* 7. Production Pipeline (Kanban 9 columns) */}
       <KanbanWorkflowBoard
         items={filteredItems}
         onSelectPost={(post) => setSelectedPost(post)}
         onOpenAddModal={() => setAddModalOpen(true)}
       />
 
-      {/* 7. Analytics Charts (3 cards: Pillar donut, Platform bar, Weekly performance) */}
+      {/* 8. Analytics Charts (3 cards: Pillar donut, Platform bar, Weekly performance) */}
       <AnalyticsChartsSection items={filteredItems} />
 
-      {/* 8. Team Overview + Hashtag Library (2 cards) */}
+      {/* 9. Team Overview + Hashtag Library (2 cards) */}
       <TeamAndHashtagSection items={filteredItems} />
 
-      {/* 9. Content Card Grid (3 columns, left pillar color border) */}
+      {/* 10. Content Card Grid (3 columns, left pillar color border) */}
       <ContentCardGrid
         items={filteredItems}
         onSelectPost={(post) => setSelectedPost(post)}
